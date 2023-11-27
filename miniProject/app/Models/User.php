@@ -12,6 +12,7 @@ class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
 
+    //remove the created_at and updated_at from the table
     public $timestamps = false;
 
     /**
