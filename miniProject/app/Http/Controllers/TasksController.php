@@ -2,20 +2,29 @@
 
 namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\Task;
 use Illuminate\Http\Request;
+use JWTAuth;
 
 class TasksController extends Controller
 {
+
     public function __construct()
     {
         $this->middleware('auth:api');
     }
 
+    //once ethe user login we get their userId from the token;
+    //Couldnt make it as a constant because every user has a different token
+    private function getCurrentUserId(): int {
+        return (int) auth()->user()->id;
+    }
 
     public function createTask(Request $request)
     {
+
         $validator = Validator::make($request->all(), [
             'title' => 'required|string',
             'description' => 'required|string',
@@ -35,19 +44,21 @@ class TasksController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'due_date' => $request->due_date,
+            'user_id' => $this->getCurrentUserId(),
         ]);
 
         return response()->json([
             'status' => 'success',
             'task' => $task
-        ], 201);
+        ], 200);
     }
 
 
     public function listTasks()
     {
         try {
-            $tasks = Task::all();
+            $userId = $this->getCurrentUserId();
+            $tasks = Task::where('user_id', $userId)->get();
 
             return response()->json(['tasks' => $tasks]);
         } catch (\Exception $e) {
@@ -58,10 +69,14 @@ class TasksController extends Controller
         }
     }
 
+
     public function listTasksByDate()
     {
         try {
-            $tasks = Task::orderBy('due_date')->get();
+            $userId = $this->getCurrentUserId();
+            $tasks = Task::where('user_id', $userId)
+                         ->orderBy('due_date')
+                         ->get();
 
             return response()->json(['tasks' => $tasks]);
         } catch (\Exception $e) {
@@ -75,24 +90,15 @@ class TasksController extends Controller
 
     public function editTask(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'title' => 'sometimes|string',
-            'description' => 'sometimes|string',
-            'due_date' => 'sometimes|date',
-        ]);
-
-        if ($validator->fails()) {
-            $errors = $validator->errors()->all();
-
-            return response()->json([
-                'status' => 'error',
-                'message' => "There are invalid inputs",
-                'errors' => $errors
-            ], 422);
-        }
-
         try {
-            $task = Task::findOrFail($id);
+            $userId = $this->getCurrentUserId();
+            $task = Task::where('user_id', $userId)->findOrFail($id);
+
+            $request->validate([
+                'title' => 'sometimes|string',
+                'description' => 'sometimes|string',
+                'due_date' => 'sometimes|date',
+            ]);
 
             $task->update($request->only('title', 'description', 'due_date'));
 
@@ -103,29 +109,35 @@ class TasksController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to update task.'
+                'message' => 'Failed to update task or unauthorized.'
             ], 500);
         }
     }
 
-    public function deleteTask($id)
-    {
-        $task = Task::find($id);
 
-        if (!$task) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Task not found',
-            ], 404);
-        }
+
+    public function deleteTask($id)
+{
+    try {
+        $userId = $this->getCurrentUserId();
+        $task = Task::where('user_id', $userId)
+                    ->where('id', $id)
+                    ->firstOrFail();
 
         $task->delete();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Task deleted successfully',
-        ]);
+            'message' => 'Task deleted successfully.'
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to delete task or task does not exist.'
+        ], 500);
     }
+}
+
 
     //filterdata
     // an api to search for data the user will enter a string, and this string will search where it matches in title and  another one for description - both can be empty
@@ -134,6 +146,8 @@ class TasksController extends Controller
 
     public function filterData(Request $request)
     {
+        $userId = $this->getCurrentUserId();
+
         $validatedData = $request->validate([
             'search_title' => 'nullable|string',
             'search_description' => 'nullable|string',
@@ -155,10 +169,10 @@ class TasksController extends Controller
                 'message' => 'Both dates need to be selected or both left empty.'
             ], 422);
         }
-        //query() works like pipe a stack, apply a query it will add the values to our variable and the the next query will be applied on the values inside the variable
-        $tasksQuery = Task::query();
 
-        //returns nothing if i dont condition the date dont know why
+        $tasksQuery = Task::query();
+        $tasksQuery->where('user_id', $userId);
+
         if ($fromDate !== null && $toDate !== null) {
             $tasksQuery->whereBetween('due_date', [$fromDate, $toDate]);
         }
