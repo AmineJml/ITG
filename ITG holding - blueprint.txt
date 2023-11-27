@@ -1,0 +1,54 @@
+ITG holding - blueprint:
+
+- User authentication: JWT token will be used.
+
+- Database:
+
+Users, Tasks, categories
+
+I can create a new task and it wont have a category, the same goes fr category, i can create a category but it wont have any task.
+
+Also a task can have multiple categories, and a category can have multiple task
+If a user adds a task to a category from the category api, lets say task create an app - category software developemnt. Therefore i after creatigna  categry i will have another api that allows the user to add different tasks in an array.
+It will be added in the category table, however during the process no duplicates will exist with the same name and task_id
+
+Users:
+- id
+- name
+- email
+- password
+
+Tasks:
+- id
+- title
+- description
+- Due date
+
+Category:
+- id
+- name
+- task_id
+
+-------------------------------------------------------------
+apis:
+1- Register
+2- Login
+
+3- createTask
+4- listTasks
+5- EditTask
+6- SearchTask and filterdata (big problemo)
+
+7- categorizeTask
+8- createCategory
+9- editCategory
+10- delteCategory
+11- SearchCategories and  filtercategories (same problem :( )
+--------------------------------------------------------------
+Only Users may access these apis, except register and login will return with a token for authentication purposses
+
+Validation rules will be included inside the api before adding them to data base - no problemo
+
+
+Learn how to use Laravel's Eloquent ORM
+Im allowed to use any database i want since you know migrate exists, therefore i need familiar myself with the orm before starting.
