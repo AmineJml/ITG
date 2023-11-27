@@ -13,6 +13,7 @@ return [
     |
     */
 
+    //modified from web to api, since we are using jwt token with apis
     'defaults' => [
         'guard' => 'api',
         'passwords' => 'users',
@@ -40,10 +41,12 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        //JWT
         'api' => [
             'driver' => 'jwt',
             'provider' => 'users',
     ],
+
     ],
 
     /*
