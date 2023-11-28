@@ -138,10 +138,5 @@ class CategoriesController extends Controller
             ], 500);
         }
     }
-
-
-
-
-
-
 }
+    

@@ -17,9 +17,5 @@ class Task extends Model
 
     protected $fillable = ['title', 'description', 'due_date', 'user_id'];
 
-    // user_id foreging key from table users
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+
 }

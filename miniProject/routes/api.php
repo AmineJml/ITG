@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TasksController;
 use App\Http\Controllers\CategoriesController;
+use App\Http\Controllers\TasksCategoriesController;
+
+
 
 
 Route::controller(AuthController::class)->group(function () {
@@ -31,6 +34,12 @@ Route::controller(CategoriesController::class)->group(function () {
     Route::put('category/{id}', 'editCategory');
     Route::delete('category/{id}', 'deleteCategory');
     Route::get('search', 'filterCategories');
+
+});
+
+Route::controller(TasksCategoriesController::class)->group(function () {
+    Route::post('categorize', 'addTaskToCategory');
+
 
 });
 /*
