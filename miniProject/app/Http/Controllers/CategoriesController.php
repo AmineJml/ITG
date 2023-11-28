@@ -110,7 +110,7 @@ class CategoriesController extends Controller
     }
 
 
-    //Search categories -- only search by name
+    //Search categories -- search by name nad task belongs to it
     public function filterCategories(Request $request)
     {
         try {
@@ -118,18 +118,58 @@ class CategoriesController extends Controller
 
             $validatedData = $request->validate([
                 'name' => 'nullable|string',
+                'task_id' => 'nullable|int',
             ]);
 
             $name = $validatedData['name'] ?? '';
-
+            $task = $validatedData['task_id'] ?? null;
 
             $categories = Category::where('user_id', $userId)
                 ->where('name', 'like', '%' . $name . '%')
+                ->leftjoin('tasks_categories', 'categories.id', '=', 'tasks_categories.category_id')
                 ->get();
+
+
+            $tempQuery = [];
+
+            foreach ($categories as $category) {
+                $categoryId = $category['id'];
+
+                $categoryIndex = array_search($categoryId, array_column($tempQuery, 'id'));
+
+                if ($categoryIndex !== false) {
+                    $tempQuery[$categoryIndex]['task_id'][] = $category['task_id'];
+                } else {
+                    $tempQuery[] = [
+                        'id' => $category['id'],
+                        'name' => $category['name'],
+                        'user_id' => $category['user_id'],
+                        'task_id' => [$category['task_id']]
+                    ];
+                }
+            }
+
+
+
+            $filteredCategories = [];
+
+            if(isset($task)){
+
+                for ($i = 0; $i < count($tempQuery); $i++) {
+
+                    $category = $tempQuery[$i];
+
+                    if (in_array($task, $category['task_id'])) {
+                        $filteredCategories[] = $category;
+                    }
+                }
+
+                $tempQuery = $filteredCategories;
+            }
 
             return response()->json([
                 'status' => 'success',
-                'categories' => $categories
+                'categories' => $tempQuery
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -139,4 +179,3 @@ class CategoriesController extends Controller
         }
     }
 }
-    

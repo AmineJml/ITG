@@ -175,12 +175,14 @@ class TasksController extends Controller
                 'search_description' => 'nullable|string',
                 'from_date' => 'nullable|date',
                 'to_date' => 'nullable|date|after_or_equal:from_date',
+                'category' => 'nullable|int',
             ]);
 
             $searchTitle = $validatedData['search_title'] ?? '';
             $searchDescription = $validatedData['search_description'] ?? '';
             $fromDate = $validatedData['from_date'] ?? null;
             $toDate = $validatedData['to_date'] ?? null;
+            $category = $validatedData['category'] ?? null;
 
             //Search priority, Date - title - description
 
@@ -192,36 +194,56 @@ class TasksController extends Controller
                 ], 422);
             }
 
-            $tasksQuery = Task::query();
-
-            $tasks = DB::table('tasks')
-            ->join('tasks_categories', 'tasks.id', '=', 'tasks_categories.task_id')
-            ->select('tasks.*', 'tasks_categories.*');
-
-            //$tasksQuery->leftjoin('tasks_categories', 'tasks.id', '=', 'tasks_categories.task_id');
-
-
-                //->leftjoin('categories', 'tasks_categories.category_id', '=', 'categories.id');
-               // ->select('id', 'title', 'description', 'due_date', 'user_id', 'task_id', )
-               return response()->json([
-                'status' => 'success',
-                'tasks' => $tasks->get()
-            ]);
-
+            $tasksQuery = Task::query()
+            ->leftjoin('tasks_categories', 'tasks.id', '=', 'tasks_categories.task_id')
+            ->where('tasks.title', 'like', '%' . $searchTitle . '%')
+            ->where('tasks.description', 'like', '%' . $searchDescription . '%');
 
             if ($fromDate !== null && $toDate !== null) {
                 $tasksQuery->whereBetween('due_date', [$fromDate, $toDate]);
             }
 
-            $tasksQuery->where('tasks.title', 'like', '%' . $searchTitle . '%')
-                ->where('tasks.description', 'like', '%' . $searchDescription . '%');
+            $tasksQuery = $tasksQuery->get();
 
+            $tempQuery = [];
+            //concatenate categories so reutrn does not revice 2 differet task with same id but different categories
+            foreach ($tasksQuery as $task) {
+                $taskId = $task['id'];
 
+                $taskIndex = array_search($taskId, array_column($tempQuery, 'id'));
 
+                if ($taskIndex !== false) {
+                    $tempQuery[$taskIndex]['category_id'][] = $task['category_id'];
+                } else {
+                    $tempQuery[] = [
+                        'id' => $task['id'],
+                        'title' => $task['title'],
+                        'description' => $task['description'],
+                        'due_date' => $task['due_date'],
+                        'user_id' => $task['user_id'],
+                        'category_id' => [$task['category_id']]
+                    ];
+                }
+            }
 
+            //select all tasks that have category_id in them ($category from parameters)
+            //if a task have multiple categories it retruns the other categories too
+            $filteredTasks = [];
+
+            if(isset($category)){
+                for ($i = 0; $i < count($tempQuery); $i++) {
+                    $task = $tempQuery[$i];
+                    if (in_array($category, $task['category_id'])) {
+                        $filteredTasks[] = $task;
+                    }
+                }
+
+                $tempQuery = $filteredTasks;
+
+            }
             return response()->json([
                 'status' => 'success',
-                'tasks' => $tasksQuery->get()
+                'tasks' => $tempQuery
             ]);
             } catch (Exception $e) {
                 return response()->json([
