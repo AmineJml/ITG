@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TasksController;
+use App\Http\Controllers\CategoriesController;
 
 
 Route::controller(AuthController::class)->group(function () {
@@ -22,6 +23,15 @@ Route::controller(TasksController::class)->group(function () {
     Route::put('task/{id}', 'editTask');
     Route::delete('task/{id}', 'deleteTask');
     Route::get('search', 'filterTasks');
+});
+
+
+Route::controller(CategoriesController::class)->group(function () {
+    Route::post('category', 'createCategory');
+    Route::put('category/{id}', 'editCategory');
+    Route::delete('category/{id}', 'deleteCategory');
+    Route::get('search', 'filterCategories');
+
 });
 /*
 |--------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 
 use App\Models\Task;
@@ -34,11 +33,6 @@ class TasksController extends Controller
             $validatedData['user_id'] = $this->getCurrentUserId();
 
             $task = Task::create($validatedData);
-
-            return response()->json([
-                'status' => 'success',
-                'task' => $task
-            ], 200);
 
             return response()->json([
                 'status' => 'success',
