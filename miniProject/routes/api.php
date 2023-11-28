@@ -21,7 +21,7 @@ Route::controller(TasksController::class)->group(function () {
     Route::post('task', 'createTask');
     Route::put('task/{id}', 'editTask');
     Route::delete('task/{id}', 'deleteTask');
-    Route::get('search', 'filterData');
+    Route::get('search', 'filterTasks');
 });
 /*
 |--------------------------------------------------------------------------

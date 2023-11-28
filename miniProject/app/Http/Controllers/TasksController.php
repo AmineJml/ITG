@@ -24,34 +24,34 @@ class TasksController extends Controller
 
     public function createTask(Request $request)
     {
+        try {
+            $validatedData = $request->validate([
+                'title' => 'required|string',
+                'description' => 'required|string',
+                'due_date' => 'required|date',
+            ]);
+            // adding user_id to our new task
+            $validatedData['user_id'] = $this->getCurrentUserId();
 
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|string',
-            'description' => 'required|string',
-            'due_date' => 'required|date',
-        ]);
-
-        if ($validator->fails()) {
-            $errors = $validator->errors()->all();
+            $task = Task::create($validatedData);
 
             return response()->json([
+                'status' => 'success',
+                'task' => $task
+            ], 200);
+
+            return response()->json([
+                'status' => 'success',
+                'task' => $task
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
                 'status' => 'error',
-                'message' => "there is a miss input",
-            ], 422);
+                'message' => 'Failed to create tasks.'
+            ], 500);
         }
-
-        $task = Task::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'due_date' => $request->due_date,
-            'user_id' => $this->getCurrentUserId(),
-        ]);
-
-        return response()->json([
-            'status' => 'success',
-            'task' => $task
-        ], 200);
     }
+
 
 
     public function listTasks()
@@ -61,7 +61,7 @@ class TasksController extends Controller
             $tasks = Task::where('user_id', $userId)->get();
 
             return response()->json(['tasks' => $tasks]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve tasks.'
@@ -79,7 +79,7 @@ class TasksController extends Controller
                          ->get();
 
             return response()->json(['tasks' => $tasks]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to retrieve tasks.'
@@ -91,22 +91,39 @@ class TasksController extends Controller
     public function editTask(Request $request, $id)
     {
         try {
-            $userId = $this->getCurrentUserId();
-            $task = Task::where('user_id', $userId)->findOrFail($id);
 
-            $request->validate([
+            $validatedData = $request->validate([
                 'title' => 'sometimes|string',
                 'description' => 'sometimes|string',
                 'due_date' => 'sometimes|date',
             ]);
 
-            $task->update($request->only('title', 'description', 'due_date'));
+            $userId = $this->getCurrentUserId();
+            //validating the existence of the task
+            $task = Task::where('user_id', $userId)->find($id);
+
+            if (!$task) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Task not found or unauthorized for deletion.'
+                ], 404);
+            }
+
+            $task = Task::where('user_id', $userId)
+                        ->where('id', $id)
+                        ->update([
+                            'title' => $validatedData['title'],
+                            'description' => $validatedData['description'],
+                            'due_date' => $validatedData['due_date'],
+                        ]);
+            //to check if the returnd value have updated successfully
+            $updatedTask = Task::find($id);
 
             return response()->json([
                 'status' => 'success',
-                'task' => $task
+                'task' => $updatedTask
             ], 200);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to update task or unauthorized.'
@@ -116,27 +133,34 @@ class TasksController extends Controller
 
 
 
+
     public function deleteTask($id)
-{
-    try {
-        $userId = $this->getCurrentUserId();
-        $task = Task::where('user_id', $userId)
-                    ->where('id', $id)
-                    ->firstOrFail();
+    {
+        try {
+            $userId = $this->getCurrentUserId();
+            $task = Task::where('user_id', $userId)->find($id);
 
-        $task->delete();
+            if (!$task) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Task not found or unauthorized for deletion.'
+                ], 404);
+            }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Task deleted successfully.'
-        ], 200);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Failed to delete task or task does not exist.'
-        ], 500);
+            $task->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Task deleted successfully.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete task or task does not exist.'
+            ], 500);
+        }
     }
-}
+
 
 
     //filterdata
@@ -144,51 +168,57 @@ class TasksController extends Controller
     //in the same api there will gold date inputs that indicates from timea to timeb, either both empyt or both
     // are filled to select a sepcific date
 
-    public function filterData(Request $request)
+    public function filterTasks(Request $request)
     {
-        $userId = $this->getCurrentUserId();
+        try
+        {
+            $userId = $this->getCurrentUserId();
 
-        $validatedData = $request->validate([
-            'search_title' => 'nullable|string',
-            'search_description' => 'nullable|string',
-            'from_date' => 'nullable|date',
-            'to_date' => 'nullable|date|after_or_equal:from_date',
-        ]);
+            $validatedData = $request->validate([
+                'search_title' => 'nullable|string',
+                'search_description' => 'nullable|string',
+                'from_date' => 'nullable|date',
+                'to_date' => 'nullable|date|after_or_equal:from_date',
+            ]);
 
-        $searchTitle = $validatedData['search_title'] ?? '';
-        $searchDescription = $validatedData['search_description'] ?? '';
-        $fromDate = $validatedData['from_date'] ?? null;
-        $toDate = $validatedData['to_date'] ?? null;
+            $searchTitle = $validatedData['search_title'] ?? '';
+            $searchDescription = $validatedData['search_description'] ?? '';
+            $fromDate = $validatedData['from_date'] ?? null;
+            $toDate = $validatedData['to_date'] ?? null;
 
-        //Search priority, Date - title - description
+            //Search priority, Date - title - description
 
-        // Checking date range (USER CANT ENTER ONE and skip the other)
-        if (!(($fromDate !== null && $toDate !== null) || ($fromDate === null && $toDate === null))) {
+            // Checking date range (USER CANT ENTER ONE date and skip the other)
+            if (!(($fromDate !== null && $toDate !== null) || ($fromDate === null && $toDate === null))) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Both dates need to be selected or both left empty.'
+                ], 422);
+            }
+
+            $tasksQuery = Task::query();
+            $tasksQuery->where('user_id', $userId);
+
+            if ($fromDate !== null && $toDate !== null) {
+                $tasksQuery->whereBetween('due_date', [$fromDate, $toDate]);
+            }
+
+            $tasksQuery->where('title', 'like', '%' . $searchTitle . '%');
+
+            $tasksQuery->where(function ($query) use ($searchDescription) {
+                $query->where('description', 'like', '%' . $searchDescription . '%');
+            });
+
             return response()->json([
-                'status' => 'error',
-                'message' => 'Both dates need to be selected or both left empty.'
-            ], 422);
-        }
-
-        $tasksQuery = Task::query();
-        $tasksQuery->where('user_id', $userId);
-
-        if ($fromDate !== null && $toDate !== null) {
-            $tasksQuery->whereBetween('due_date', [$fromDate, $toDate]);
-        }
-
-        $tasksQuery->where('title', 'like', '%' . $searchTitle . '%');
-
-        $tasksQuery->where(function ($query) use ($searchDescription) {
-            $query->where('description', 'like', '%' . $searchDescription . '%');
-        });
-
-        $tasks = $tasksQuery->get();
-
-        return response()->json([
-            'status' => 'success',
-            'tasks' => $tasks
-        ]);
+                'status' => 'success',
+                'tasks' => $tasksQuery->get()
+            ]);
+            } catch (Exception $e) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to delete task or task does not exist.'
+                ], 500);
+            }
     }
 
 

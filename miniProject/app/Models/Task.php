@@ -11,9 +11,13 @@ class Task extends Model
     public $timestamps = false;
 
     use HasFactory;
+    // The attributes that are mass assignable.
+    // to prevent malicious attacks
+    //check eloquent ORM
+
     protected $fillable = ['title', 'description', 'due_date', 'user_id'];
 
-    // Define the relationship to the User model
+    // user_id foreging key from table users
     public function user()
     {
         return $this->belongsTo(User::class);
