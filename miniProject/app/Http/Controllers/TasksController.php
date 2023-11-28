@@ -7,6 +7,8 @@ use App\Models\Task;
 use Illuminate\Http\Request;
 use JWTAuth;
 
+use Illuminate\Support\Facades\DB;
+
 class TasksController extends Controller
 {
 
@@ -191,17 +193,31 @@ class TasksController extends Controller
             }
 
             $tasksQuery = Task::query();
-            $tasksQuery->where('user_id', $userId);
+
+            $tasks = DB::table('tasks')
+            ->join('tasks_categories', 'tasks.id', '=', 'tasks_categories.task_id')
+            ->select('tasks.*', 'tasks_categories.*');
+
+            //$tasksQuery->leftjoin('tasks_categories', 'tasks.id', '=', 'tasks_categories.task_id');
+
+
+                //->leftjoin('categories', 'tasks_categories.category_id', '=', 'categories.id');
+               // ->select('id', 'title', 'description', 'due_date', 'user_id', 'task_id', )
+               return response()->json([
+                'status' => 'success',
+                'tasks' => $tasks->get()
+            ]);
+
 
             if ($fromDate !== null && $toDate !== null) {
                 $tasksQuery->whereBetween('due_date', [$fromDate, $toDate]);
             }
 
-            $tasksQuery->where('title', 'like', '%' . $searchTitle . '%');
+            $tasksQuery->where('tasks.title', 'like', '%' . $searchTitle . '%')
+                ->where('tasks.description', 'like', '%' . $searchDescription . '%');
 
-            $tasksQuery->where(function ($query) use ($searchDescription) {
-                $query->where('description', 'like', '%' . $searchDescription . '%');
-            });
+
+
 
             return response()->json([
                 'status' => 'success',

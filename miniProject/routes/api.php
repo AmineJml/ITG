@@ -25,7 +25,7 @@ Route::controller(TasksController::class)->group(function () {
     Route::post('task', 'createTask');
     Route::put('task/{id}', 'editTask');
     Route::delete('task/{id}', 'deleteTask');
-    Route::get('search', 'filterTasks');
+    Route::get('searchTasks', 'filterTasks');
 });
 
 
@@ -33,7 +33,7 @@ Route::controller(CategoriesController::class)->group(function () {
     Route::post('category', 'createCategory');
     Route::put('category/{id}', 'editCategory');
     Route::delete('category/{id}', 'deleteCategory');
-    Route::get('search', 'filterCategories');
+    Route::get('searchCategories', 'filterCategories');
 
 });
 

@@ -14,7 +14,6 @@ return new class extends Migration
     public function up()
     {
         Schema::create('tasks_categories', function (Blueprint $table) {
-            $table->id();
             $table->unsignedBigInteger('task_id');
             $table->unsignedBigInteger('category_id');
 
